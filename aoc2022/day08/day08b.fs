@@ -15,14 +15,6 @@ variable get-dist-steps
 ;
 
 : .array            ( 'array -- )
-    @
-    #rows 0 do
-        #cols 0 do
-            dup i j * 
-        loop
-    loop
-;
-: .array            ( 'array -- )
     @                                   ( addr )
     #rows @ #cols @ * 0 do                  ( addr )
         i #cols @ mod 0= if cr then
