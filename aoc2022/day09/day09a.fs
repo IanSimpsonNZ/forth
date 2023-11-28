@@ -46,13 +46,13 @@ variable 'hash
     then then                   ( tx ty hx hy )
 ;
 
-: search-key    ( key 'q-addr -- n|0 )
+: search-key    ( key 'q-addr -- n+1|0 )
     0 rot rot                           ( 0 key 'addr )
     dup @ q-len dup if                  ( 0 key 'addr q-len)
         0 do                            ( 0 key 'addr )
             dup @ i q-data-ptr @        ( 0 key 'addr ith-n)
             2over swap drop = if        ( 0 key 'addr ith-n key )
-                rot drop i rot rot      ( i key 'addr )
+                rot drop i 1+ rot rot   ( i key 'addr )                 \ so we never return position 0
                 leave
             then                        ( 0 key 'addr )
         loop
