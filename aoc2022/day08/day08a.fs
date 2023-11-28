@@ -94,18 +94,49 @@ variable 'cansee
     init-cansee
 ;
 
+: visible?          ( max col row -- max )
+    rot dup 2over                           ( col row max max col row )
+    'forrest rot rot at c@ swap drop        ( col row max h )
+    2dup < if                               ( col row max h )
+        2swap 'cansee rot rot at 1 swap c!  ( max h )
+    else 2swap 2drop then
+    max
+;
+
+: set-visible  ( -- )
+    #rows @ 1- 1 do
+        'forrest 0 i at c@                      ( row-height-left )
+        #cols @ 1- 1 do i j visible? loop       ( row-max )
+        drop 'forrest #cols @ 1- i at c@        ( row-height-right )
+        1 #cols @ 1- do i j visible? -1 +loop   ( row-max )
+        drop
+    loop
+
+    #cols @ 1- 1 do
+        'forrest i 0 at c@
+        #rows @ 1- 1 do j i visible? loop
+        drop 'forrest i #rows @ 1- at c@
+        1 #rows @ 1- do j i visible? -1 +loop
+        drop
+    loop
+;
+
 : process       ( -- )
-\    0 #rows !
-\    0 #cols !
     create-arrays
     cr
     'forrest .array
+
+    set-visible
     cr
     'cansee .array
 ;
 
 : .result       ( -- )
-    ." The answer is: " cr
+    0
+    'cansee @ dup #rows @ #cols @ * + swap do
+        i c@ +
+    loop
+    cr ." The answer is: " . cr
 ;
 
 : go
