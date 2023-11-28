@@ -4,7 +4,7 @@ require ~/forth/libs/queue.fs
 128 Constant max-line
 Create line-buffer  max-line 2 + allot
 
-16 constant move-high
+16384 constant move-high
 16384 constant max-hash-len
 
 variable 'hash
@@ -62,7 +62,7 @@ variable 'hash
 
 : store-tail    ( tx ty hx hy -- tx ty hx hy )
     2swap                               ( hx hy tx ty )
-    2dup move-high lshift +             ( hx hy tx ty key )
+    2dup move-high * +                  ( hx hy tx ty key )
     dup 'hash search-key                ( hx hy tx ty key p|0 )
     if drop                             ( hx hy tx ty ) 
     else 'hash @ q-push then            ( hx hy tx ty )
@@ -90,10 +90,11 @@ variable 'hash
     begin get-line while                    ( tx ty hx hy len )
         dup 3 < if ." Invalid line: " line-buffer swap type cr
         else
-            dup line-buffer swap type cr
+            dup line-buffer swap type .s cr
             move-rope
         then
     repeat drop
+    2drop 2drop
 ;
 
 : setup         ( -- )
