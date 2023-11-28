@@ -9,9 +9,17 @@ variable 'forrest
 variable 'cansee
 
 : at                ( 'array col row -- byte-addr)   \ Usage 'forrest 5 10 at @c
-    #cols * + swap @ +
+    #cols @ * + swap @ +              ( c+r*#c addr)
 ;
 
+: .array            ( 'array -- )
+    @
+    #rows 0 do
+        #cols 0 do
+            dup i j * 
+        loop
+    loop
+;
 : .array            ( 'array -- )
     @                                   ( addr )
     #rows @ #cols @ * 0 do                  ( addr )
@@ -48,7 +56,7 @@ variable 'cansee
     then drop                   ( #c )
 ;
 
-: create-arrays     ( -- )
+: create-forrest        ( -- #rows #cols )
     0 0                                     ( #rows #cols )
     here 'forrest !
     begin get-line while                    ( #r #c len )
@@ -58,18 +66,42 @@ variable 'cansee
         my-cmove                            ( #r #c )
         swap 1+ swap                        ( #r+1 #c )
     repeat drop                             ( #r #c )
-    here 'cansee ! 2dup * allot             ( #r #c )
+;
+
+: create-cansee         ( #r #c -- #r #c )
+    here dup dup 'cansee !                  ( #r #c here here )
+    2over * allot                           ( #r #c here here )
+    2over * erase                           ( #r #c here )
+    drop                                    ( #r #c )
+;
+
+: init-cansee           ( -- )              \ Expects #rows and #cols to be set
+    #cols @ 0 do
+        1 'cansee i 0 at c!
+        1 'cansee i #rows @ 1- at c!
+    loop
+
+    #rows @ 1- 1 do
+        1 'cansee 0 i at c!
+        1 'cansee #cols @ 1- i at c!
+    loop
+;
+
+: create-arrays     ( -- )
+    create-forrest
+    create-cansee
     #cols ! #rows !
+    init-cansee
 ;
 
 : process       ( -- )
 \    0 #rows !
 \    0 #cols !
     create-arrays
-    cr ." r c = " #rows ? #cols ? cr
-    ." forrest addr = " 'forrest ? cr
-    .s cr
+    cr
     'forrest .array
+    cr
+    'cansee .array
 ;
 
 : .result       ( -- )
