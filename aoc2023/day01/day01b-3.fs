@@ -70,19 +70,21 @@ s" nine" make-string nine
     2swap 2drop                                     ( n f )
 ;
 
+: save-num          ( c -- )
+    filtered filter-len @ + c!
+    1 filter-len +!
+;
 
 : filter-line  ( -- )
     0 filter-len !
     buff-len @ 0 do
         i check-nums if
-            filtered filter-len @ + c!
-            1 filter-len +!
+            save-num
         else
             drop
             line-buffer i + c@ [char] 0 -
             dup ischar? if
-                filtered filter-len @ + c!
-                1 filter-len +!
+                save-num
             else drop then
         then
     loop
