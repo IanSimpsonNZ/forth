@@ -119,7 +119,7 @@ variable 'hash
     begin get-line while                    ( len )
         dup 3 < if ." Invalid line: " line-buffer swap type cr
         else
-            dup line-buffer swap type .s cr
+\            dup line-buffer swap type .s cr
             move-rope
         then
     repeat drop
