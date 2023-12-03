@@ -13,15 +13,20 @@ create filtered max-line allot
 variable buff-len
 variable filter-len
 
-create one 3 allot s" one" one swap move
-create two 3 allot s" two" two swap move
-create three 5 allot s" three" three swap move
-create four 4 allot s" four" four swap move
-create five 4 allot s" five" five swap move
-create six 3 allot s" six" six swap move
-create seven 5 allot s" seven" seven swap move
-create eight 5 allot s" eight" eight swap move
-create nine 4 allot s" nine" nine swap move
+: make-string       ( addr len -- )
+    dup dup create , here swap allot swap move
+    does> dup cell+ swap @
+;
+
+s" one" make-string one
+s" two" make-string two
+s" three" make-string three
+s" four" make-string four
+s" five" make-string five
+s" six" make-string six
+s" seven" make-string seven
+s" eight" make-string eight
+s" nine" make-string nine
 
 : get-line      ( -- num-chars flag )   line-buffer max-line fd-in read-line throw ;
 : get-num       ( num-chars -- n )      0. rot line-buffer swap >number 2drop drop ;
@@ -51,15 +56,15 @@ create nine 4 allot s" nine" nine swap move
 : check-nums            ( start-pos -- n f )
     dup line-buffer +                           ( start-pos 'start )
     swap buff-len @ swap -                      ( 'start len )
-    2dup one 3 same? if 1 -1
-    else 2dup two 3 same? if 2 -1
-    else 2dup three 5 same? if  3 -1
-    else 2dup four 4 same? if 4 -1
-    else 2dup five 4 same? if 5 -1
-    else 2dup six 3 same? if 6 -1
-    else 2dup seven 5 same? if  7 -1
-    else 2dup eight 5 same? if 8 -1
-    else 2dup nine 4 same? if 9 -1
+    2dup one same? if 1 -1
+    else 2dup two same? if 2 -1
+    else 2dup three same? if  3 -1
+    else 2dup four same? if 4 -1
+    else 2dup five same? if 5 -1
+    else 2dup six same? if 6 -1
+    else 2dup seven same? if  7 -1
+    else 2dup eight same? if 8 -1
+    else 2dup nine same? if 9 -1
     else 0 0
     then then then then then then then then then    ( 'start len n f )
     2swap 2drop                                     ( n f )
