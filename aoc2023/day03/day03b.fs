@@ -44,7 +44,7 @@ variable buff-len
     else 2drop false then
 ;
 
-: check-line        ( line-num cpos -- n )              \ count number of numbers in the three characters above a * 0, 1 or 2
+: check-line        ( line-num cpos -- n )              \ count number of numbers in the three characters above or below a * - 0, 1 or 2
                                                         \ line-num has already been set to one line above or below
     2dup bound-isnum? if                                ( ln cpos)
         2drop 1                                         ( 1 )                   \ if num in middle then only one number
@@ -61,8 +61,8 @@ variable buff-len
     0 0                                                 ( ln cpos 0 acc )
     2over 1- bound-isnum? if 1+ then                    ( ln cpos 0 acc )       \ left
     2over 1+ bound-isnum? if 1+ then                    ( ln cpos 0 acc )       \ right
-    2over swap 1- swap check-line +                     ( ln cpos 0 acc' )      \ above
-    2swap swap 1+ swap check-line +                     ( 0 acc'' )             \ below
+    2over swap 1- swap check-line +                     ( ln cpos 0 acc )       \ above
+    2swap swap 1+ swap check-line +                     ( 0 acc )               \ below
     swap drop
 ;
 
