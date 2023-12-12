@@ -18,3 +18,13 @@
     begin 2dup 0> swap c@ 32 = and while                ( addr len )
     1- swap 1+ swap repeat                              ( addr+1 len-1 )
 ;
+
+: $tring    ( max-len -- )                              \ stores max len and current len - : max-len : current-len : char-data-> :
+    create dup , 0 , allot
+    does> ( -- addr len ) 1 cells + dup 1 cells + swap @
+;
+
+: $copy     ( addr1 len1 addr2 len2 -- )                \ usage $from-string $to-string $copy - assumes my $string format above
+    drop dup 2 cells - @ rot min                                  ( addr1 addr2 #chars )
+    2dup swap 1 cells - !                               ( addr1 addr2 #chars )          \ store string length in target
+    move ;                                              (  )                            \ copy chars from string1 up to max-length of string2
