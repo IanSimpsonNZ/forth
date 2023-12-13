@@ -111,39 +111,41 @@ Create line-buffer  max-line 2 + allot
     then then then then then then
 ;
 
-: compare-cards     ( c1-addr c2-addr -- -1 | 0 | 1 )   \ -1 => c1 < c2; 0 => c1 = c2; 1 => c1 > c2
+: compare-card     ( c1-addr c2-addr -- -1 | 0 | 1 )   \ -1 => c1 < c2; 0 => c1 = c2; 1 => c1 > c2
     c@ card-val swap c@ card-val swap               ( v1 v2 )
     2dup < if 2drop -1 else                         ( v1 v2 | result )
     > if 1 else                                     ( | result )
     0 then then                                     ( result )
 ;
 
-: firstwins?    ( first second -- f )
-    cards swap cards swap                           ( first second )                    \ switch from hand addr to card string addr
-    false rot rot                                   ( f first second )
-    hand-size 0 do                                  ( f first second )
-        2dup compare-cards                          ( f first second res )
-        dup 0< if drop leave then                   ( f first second res | f first second )
-        0> if rot drop true rot rot leave then      ( f first second )
-        1+ swap 1+ swap                             ( f first 'second' )
+: compare-cards    ( hand1 hand2 -- -1 | 0 | 1 )   \ -1 => h1 < h2; 0 => h1 = h2; 1 => h1 > h2
+    cards swap cards swap                           ( h1 h2 )                    \ switch from hand addr to card string addr
+    0 rot rot                                       ( 0 h1 h2 )
+    hand-size 0 do                                  ( 0 h1 h2 )
+        2dup compare-card                          ( 0 h1 h2 res' )
+        dup 0<> if swap 2swap swap drop leave then  ( 0 h1 h2 res | res h2 h1 )     \ if cards not equal, pass result (2drop at end cleans up hand pointers)
+        drop 1+ swap 1+ swap                        ( 0 h1' h2' )
     loop 2drop
 ;
 
-: sort-hands    ( -- )                              \ bubble lowest ranked hands to the top
+: hand-compare      ( hand1 hand2 -- -1 | 0 | 1 )   \ -1 => h1 < h2; 0 => h1 = h2; 1 => h1 > h2
+    2dup hand-type c@ swap hand-type c@     ( hand1 hand2 hand2-type hand1-type )
+    2dup < if 2drop 2drop 1 else            ( hand1 hand2 hand2-hand hand1-hand | result )          \ hand 1 wins
+    = if compare-cards else                 ( hand1 hand2 | result )                                \ types equal return card by card result
+    2drop -1                                ( result )                                              \ hand 2 wins
+    then then                               ( result )
+;
+
+: sort-hands    ( -- )                              \ bubble highest ranked hands to the bottom
     hand-list q-len 1- 0 do                         (  )
-        hand-list i q-data-ptr @                    ( bubble )
-        hand-list q-len i 1+ do                     ( bubble )
+        hand-list q-len i - 1 do                    (  )
+            hand-list i 1- q-data-ptr @             ( bubble )
             hand-list i q-data-ptr @                ( bubble this )
-            2dup hand-type c@ swap hand-type c@     ( bubble this this-hand bubble-hand )
-            2dup < if 2drop i 1- i hand-swap           ( bubble this this-hand bubble-hand | bubble )
-            else = if 2dup firstwins?               ( bubble this | bubble this f )
-                if i 1- i hand-swap                    ( bubble this | bubble )
-                else swap drop then                 ( this=bubble' )
-            else swap drop                          ( this=bubble' )
-            then then                               ( bubble )
-        loop
-        drop
-    loop
+            2dup hand-compare                       ( bubble this res )
+            1 = if i 1- i hand-swap drop else       ( bulle this | )
+            2drop then                              (  )
+        loop                                        (  )
+    loop                                            (  )
 ;
 
 : calc-winnings       ( -- n )
