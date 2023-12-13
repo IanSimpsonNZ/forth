@@ -45,26 +45,22 @@ Create line-buffer  max-line 2 + allot
 
 
 : get-matches   ( -- top next )
-\    $tmp type cr
     1 1                                             ( top next )
     hand-size 1- 0 do                               ( top next )
         1                                           ( top next acc )
         $tmp drop i +                               ( top next acc j-addr )
         dup c@ 32 <> if                             ( top next acc j-addr )
-\            ." Looking for " dup c@ dup . ." =" emit ."  "
             hand-size i 1+ do                       ( top next acc j-addr )
                 $tmp drop i +                       ( top next acc j-addr i-addr )
-                2dup c@ swap c@ ( 2dup emit ." =" emit ." ?" ) = if                ( top next acc j-addr i-addr )
-\                    ." Y  "
-                    32 swap c!                       ( top next acc j-addr )
+                2dup c@ swap c@ = if                ( top next acc j-addr i-addr )
+                    32 swap c!                      ( top next acc j-addr )
                     swap 1+ swap                    ( top next acc' j-addr )
-                else ( ." N  " ) drop then                      ( top next acc j-addr )
+                else drop then                      ( top next acc j-addr )
             loop                                    ( top next acc j-addr )
-        then ( cr )                                      ( top next acc j-addr )
+        then                                        ( top next acc j-addr )
         drop                                        ( top next acc )
         max 2dup max rot rot min                    ( top' next' )
     loop
-\    cr $tmp type ." ... " 2dup swap . . cr
 ;
 
 : get-type      ( top next -- hand-type )
@@ -98,16 +94,76 @@ Create line-buffer  max-line 2 + allot
 ;
 
 
+: hand-swap     ( bubble this b-index t-index -- bubble )
+    2over rot hand-list swap q-data-ptr rot swap !      ( bubble this b-index this )    \ bubble in 'this' position
+    hand-list rot q-data-ptr !                          ( bubble this )
+    drop                                                ( bubble )
+;
+
+: card-val          ( char -- n )
+    dup dup [char] 0 >= swap [char] 9 <= and if [char] 0 - else ( char | val )
+    dup [char] T = if drop 10 else                              ( char | val )
+    dup [char] J = if drop 11 else                              ( char | val )
+    dup [char] Q = if drop 12 else                              ( char | val )
+    dup [char] K = if drop 13 else                              ( char | val )
+    dup [char] A = if drop 14 else                              ( char | val )
+    -1 abort" Invalid card"
+    then then then then then then
+;
+
+: compare-cards     ( c1-addr c2-addr -- -1 | 0 | 1 )   \ -1 => c1 < c2; 0 => c1 = c2; 1 => c1 > c2
+    c@ card-val swap c@ card-val swap               ( v1 v2 )
+    2dup < if 2drop -1 else                         ( v1 v2 | result )
+    > if 1 else                                     ( | result )
+    0 then then                                     ( result )
+;
+
+: firstwins?    ( first second -- f )
+    cards swap cards swap                           ( first second )                    \ switch from hand addr to card string addr
+    false rot rot                                   ( f first second )
+    hand-size 0 do                                  ( f first second )
+        2dup compare-cards                          ( f first second res )
+        dup 0< if drop leave then                   ( f first second res | f first second )
+        0> if rot drop true rot rot leave then      ( f first second )
+        1+ swap 1+ swap                             ( f first 'second' )
+    loop 2drop
+;
+
+: sort-hands    ( -- )                              \ bubble lowest ranked hands to the top
+    hand-list q-len 1- 0 do                         (  )
+        hand-list i q-data-ptr @                    ( bubble )
+        hand-list q-len i 1+ do                     ( bubble )
+            hand-list i q-data-ptr @                ( bubble this )
+            2dup hand-type c@ swap hand-type c@     ( bubble this this-hand bubble-hand )
+            2dup < if 2drop i 1- i hand-swap           ( bubble this this-hand bubble-hand | bubble )
+            else = if 2dup firstwins?               ( bubble this | bubble this f )
+                if i 1- i hand-swap                    ( bubble this | bubble )
+                else swap drop then                 ( this=bubble' )
+            else swap drop                          ( this=bubble' )
+            then then                               ( bubble )
+        loop
+        drop
+    loop
+;
+
+: calc-winnings       ( -- n )
+    0
+    hand-list q-len 0 do
+        hand-list i q-data-ptr @ bet @ i 1+ * +
+    loop
+;
+
+
 : process       ( -- n )
     cr
     begin get-line over 0> and while                ( len )
         store-hand                                  ( hand )
         calc-type                                   (  )
-    repeat
+    repeat drop
 
+    sort-hands
     print-hands
-
-    0
+    calc-winnings
 ;
 
 : .result       ( n -- )
