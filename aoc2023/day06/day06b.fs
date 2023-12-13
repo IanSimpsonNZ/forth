@@ -11,20 +11,15 @@ require ~/forth/libs/strings.fs
 512 Constant max-line
 Create line-buffer  max-line 2 + allot
 
-512 $tring $time
-512 $tring $distance
+512 $tring $raw-time
+512 $tring $raw-distance
+32 $tring $time
+32 $tring $distance
 
 
 : get-line      ( -- num-chars flag ) line-buffer max-line fd-in read-line throw ;
 : get-next-num       ( str len -- n addr rem )
     0. 2swap >number rot drop 1- swap 1+ swap ;  ( rot drop removes top of double result )
-
-
-: get-value-string      ( addr len -- addr len )
-    [char] : $split 2swap 2drop                             ( addr len )
-    dup 2 < if -1 abort" No values after ':'" then           ( addr len )
-    1- swap 1+ swap                                         ( addr+1 len-1 )        \ Move past ':'
-;
 
 
 : num-wins          ( time dist -- #wins )
@@ -44,13 +39,29 @@ Create line-buffer  max-line 2 + allot
     dup 2rot rot drop                                       ( d-addr' d-len' score t-addr t-len )
 ;
 
+: isnum?            ( c -- f )
+    dup [char] 0 >= swap [char] 9 <= and
+;
+
+: copy-nums         ( addr1 len1 addr2 len2 -- addr2 len2')            \ Copy $1 to $2 removing anything that isn't a number
+    2swap over +                                            ( addr2 len2 $1-start $1-end )
+    swap do                                                 ( addr2 len2 )
+        i c@ isnum? if i c@ $add-char then                  ( addr2 len2' )
+    loop
+;
+
+
 : process       ( -- n )
     cr
-    get-line if line-buffer swap $time $copy else -1 abort" Could not read time line" then
-    get-line if line-buffer swap $distance $copy else -1 abort" Could not read distance line" then
+    get-line if line-buffer swap $raw-time $copy else -1 abort" Could not read time line" then
+    get-line if line-buffer swap $raw-distance $copy else -1 abort" Could not read distance line" then
+    $raw-time type cr
+    $raw-distance type cr
+    $raw-time $time copy-nums
+    $raw-distance $distance copy-nums
     $time type cr
     $distance type cr
-    $distance get-value-string 1 $time get-value-string     ( d-addr d-len score t-addr t-len )
+    $distance 1 $time                                       ( d-addr d-len score t-addr t-len )
     begin $trim-front get-next-num dup 0> while             ( d-addr d-len score n t-addr t-len )
         calc-wins                                           ( d-addr d-len score t-addr t-len )
     repeat
@@ -63,6 +74,8 @@ Create line-buffer  max-line 2 + allot
 ;
 
 : setup         ( -- )
+    $time $init
+    $distance $init
 ;
 
 : go

@@ -28,3 +28,18 @@
     drop dup 2 cells - @ rot min                                  ( addr1 addr2 #chars )
     2dup swap 1 cells - !                               ( addr1 addr2 #chars )          \ store string length in target
     move ;                                              (  )                            \ copy chars from string1 up to max-length of string2
+
+: $add-char ( addr len char -- addr len' )
+    rot dup 1 cells - dup @ swap 1 cells - @            ( len char addr len max-len )
+    < if                                                ( len char addr )
+        rot over + rot swap !                           ( addr )
+        1 cells - dup @ 1+ swap 2dup !                  ( len+1 addr-1c )
+        1 cells + swap                                  ( addr len+1 )
+    else
+        -1 abort" String overflow"
+    then
+;
+
+: $init     ( addr len -- )
+    drop 1 cells - 0 swap !
+;
