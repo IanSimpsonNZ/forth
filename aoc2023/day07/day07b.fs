@@ -43,36 +43,42 @@ Create line-buffer  max-line 2 + allot
     else -1 abort" We don't have the right number of cards?" then
 ;
 
-: count-jokers  ( max-pos -- num-jokers)
-    0 swap                                          ( acc max-pos )
-    0 do                                            ( acc )
-        $tmp drop i + c@ [char] J = if 1+ then      ( acc )
-    loop                                            ( acc )
+: count-jokers  ( -- num-jokers)
+    0                                                           ( acc )
+    hand-size 0 do                                              ( acc )
+        $tmp drop i + dup c@ [char] J = if                      ( acc c-addr )
+            32 swap c! 1+ else                                  ( acc )
+            drop then                                           ( acc )
+    loop                                                        ( acc )
+;
+
+: find-same-cards       ( top next c-pos -- top' next' )
+    1 swap dup                                          ( top next acc c-pos c-pos )
+    $tmp drop + swap                                    ( top next acc j-addr c-pos )
+    hand-size swap 1+ do                                ( top next acc j-addr )
+        $tmp drop i +                                   ( top next acc j-addr i-addr )
+        2dup c@ swap c@ = if                            ( top next acc j-addr i-addr )
+            32 swap c!                                  ( top next acc j-addr )
+            swap 1+ swap                                ( top next acc' j-addr )
+        else                                            ( top next acc j-addr i-addr )
+            drop
+        then                                            ( top next acc j-addr )
+    loop                                                ( top next acc j-addr )
+    drop                                                ( top next acc )
+    dup 5 > if abort" More than five cards?" then
+    max 2dup max rot rot min                            ( top' next' )
 ;
 
 
 : get-matches   ( -- top next )
-    hand-size count-jokers 0                                  ( top next )                    \ Prime count with num jokers and don't search for them later
-    hand-size 1- 0 do                               ( top next )
-        1                                           ( top next acc )
-        i 0> if i count-jokers + then         ( top next acc )                \ add number of jokers before this point as they all match
-        $tmp drop i +                               ( top next acc j-addr )
-        dup c@ dup 32 <> swap [char] J <> and if                             ( top next acc j-addr )
-            hand-size i 1+ do                       ( top next acc j-addr )
-                $tmp drop i +                       ( top next acc j-addr i-addr )
-                2dup c@ swap c@ = if                ( top next acc j-addr i-addr )
-                    32 swap c!                      ( top next acc j-addr )
-                    swap 1+ swap                    ( top next acc' j-addr )
-                else                                ( top next acc j-addr i-addr )
-                    c@ [char] J = if                ( top next acc j-addr )
-                        swap 1+ swap                ( top next acc j-addr )
-                    then                            ( top next acc j-addr )
-                then                      ( top next acc j-addr )
-            loop                                    ( top next acc j-addr )
-        then                                        ( top next acc j-addr )
-        drop                                        ( top next acc )
-        max 2dup max rot rot min                    ( top' next' )
+    count-jokers                                    ( #js )
+    0 0                                             ( #js top next )
+    hand-size 1- 0 do                               ( #js top next )
+        $tmp drop i + c@ 32 <> if                   ( #js top next )
+             i find-same-cards                      ( #js top' next' )
+        then
     loop
+    swap rot + swap 2 min                           ( top next )            \ Check for case such as QQKKJ which would give 3 and 3
 ;
 
 : get-type      ( top next -- hand-type )
@@ -115,7 +121,7 @@ Create line-buffer  max-line 2 + allot
 : card-val          ( char -- n )
     dup dup [char] 0 >= swap [char] 9 <= and if [char] 0 - else ( char | val )
     dup [char] T = if drop 10 else                              ( char | val )
-    dup [char] J = if drop 1 else                              ( char | val )
+    dup [char] J = if drop 1 else                               ( char | val )
     dup [char] Q = if drop 12 else                              ( char | val )
     dup [char] K = if drop 13 else                              ( char | val )
     dup [char] A = if drop 14 else                              ( char | val )
@@ -176,7 +182,6 @@ Create line-buffer  max-line 2 + allot
     repeat drop
 
     sort-hands
-    print-hands
     calc-winnings
 ;
 
