@@ -1,6 +1,7 @@
 require ~/forth/libs/files.fs
 require ~/forth/libs/array.fs
 require ~/forth/libs/strings.fs
+require ~/forth/libs/queue.fs
 
 : test     ( -- file-name-addr file-name-len )
     s" test.txt" ;
@@ -14,6 +15,8 @@ require ~/forth/libs/strings.fs
 node-list-len array node-list
 16 constant node-bits
 1 node-bits lshift constant node-divisor
+
+create paths node-list-len 1 cells q-create drop
 
 512 Constant max-line
 Create line-buffer  max-line 2 + allot
@@ -34,15 +37,22 @@ node-len $tring $tmp
     loop                                                ( node# )
 ;
 
+: ends-in?              ( char addr len -- f )
+    + 1- c@ =
+;
+
+
 : store-node        ( buff-len -- )
     line-buffer swap 32 $split                          ( $node $rest )
-    2swap get-hash rot rot                              ( node# $rest )
-    swap 4 + swap [char] , $split                       ( node# $left $rest )
-    2swap get-hash rot rot                              ( node# left# $rest )
-    swap 2 + swap [char] ) $split 2drop                 ( node# left# $right )
-    get-hash                                            ( node# left# right# )
-    swap node-bits lshift +                             ( node# lr# )
-    swap node-list !                                    (  )
+    2swap 2dup [char] A rot rot ends-in? rot rot        ( $rest f $node )
+    get-hash 2swap                                      ( f node# $rest )
+    swap 4 + swap [char] , $split                       ( f node# $left $rest )
+    2swap get-hash rot rot                              ( f node# left# $rest )
+    swap 2 + swap [char] ) $split 2drop                 ( f node# left# $right )
+    get-hash                                            ( f node# left# right# )
+    swap node-bits lshift +                             ( f node# lr# )
+    over node-list !                                    ( f node# )
+    swap if paths q-push else drop then                 (  )
 ;
 
 : get-left          ( lr# -- left# )
@@ -70,18 +80,33 @@ node-len $tring $tmp
     loop
 ;
 
-: play-game             ( target# -- num-moves )
-    0 swap 0 swap 0                                         ( acc instr-pos #target #this )
-    begin 2dup <> while                                     ( acc instr-pos #target #this )
-        rot dup $instructions drop + c@                     ( acc #target #this instr-pos instr )
-        swap 1+ $instructions swap drop mod swap            ( acc #target #this instr-pos' instr )
-        2swap rot                                           ( acc instr-pos' #target #this instr )
-        dup [char] L = if drop node-list @ get-left         ( acc instr-pos' #target #this instr | acc instr-pos' #target #left )
-        else dup [char] R = if drop node-list @ get-right   ( acc instr-pos' #target #this instr | acc instr-pos' #target #left )
-        else -1 abort" Invalid instruction" then then       ( acc instr-pos' #target #left )
-        2swap swap 1+ swap 2swap                            ( acc instr-pos' #target #left )
-    repeat                                                  ( acc instr-pos #target #this )
-    2drop drop
+: allendinZ?          ( -- f )
+    true                                                        ( result )      \ assume all end in Z
+    paths q-len 0 do
+        [char] Z paths i q-data-ptr @ decode-hash ( 2dup type ." ..." ) ends-in? and  ( result )
+    loop
+\    dup if ."  - All Z " else ."  - Continue " then cr
+;
+
+
+: play-game             ( -- num-moves )
+    0 0                                                     ( acc instr-pos )
+    begin allendinZ? invert while                                ( acc instr-pos )
+        dup $instructions drop + c@                         ( acc instr-pos instr )
+        swap 1+ $instructions swap drop mod swap            ( acc instr-pos' instr )  
+        paths q-len 0 do                                    ( acc instr-pos' instr )
+            paths i q-data-ptr @ swap                       ( acc instr-pos' #this instr )
+            dup [char] L = if                               ( acc instr-pos' #this instr )
+                swap node-list @ get-left                   ( acc instr-pos' instr #left )
+                paths i q-data-ptr !                        ( acc instr-pos' instr )
+            else dup [char] R = if                          ( acc instr-pos' #this instr )
+                swap node-list @ get-right                  ( acc instr-pos' instr #right )
+                paths i q-data-ptr !                        ( acc instr-pos' instr )
+            else -1 abort" Invalid instruction" then then   ( acc instr-pos' instr )
+        loop                                                ( acc instr-pos' instr )
+        drop swap 1+ swap                                   ( acc' instr-pos' )
+    repeat                                                  ( acc instr-pos' )
+    drop                                                    ( acc )
 ;
 
 
@@ -90,6 +115,11 @@ node-len $tring $tmp
     $instructions drop -1 cells + !
 ;
 
+: print-paths           ( -- )
+    paths q-len 0 do
+        paths i q-data-ptr @ decode-hash type cr
+    loop
+;
 : process           ( -- n )
     cr
     get-line invert if -1 abort" Could not read instruction line" then
@@ -98,10 +128,11 @@ node-len $tring $tmp
         dup 0> if store-node else drop then             (  )
     repeat drop
 
-    $instructions type cr
-    print-nodes
+    print-paths
 
-    25 26 26 * * 25 26 * + 25 + play-game                         \ search for ZZZ
+    cr cr
+    play-game
+
 ;
 
 : .result       ( n -- )
@@ -110,7 +141,8 @@ node-len $tring $tmp
 
 : setup         ( -- )
     $tmp drop 1 cells - 3 swap !
-    0 node-list node-list-len erase
+    0 node-list node-list-len -1 fill
+    paths q-init
 ;
 
 : go
