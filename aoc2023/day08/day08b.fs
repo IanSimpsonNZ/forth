@@ -17,12 +17,15 @@ node-list-len array node-list
 1 node-bits lshift constant node-divisor
 
 create paths node-list-len 1 cells q-create drop
+create loops node-list-len 1 cells q-create drop
 
 512 Constant max-line
 Create line-buffer  max-line 2 + allot
 
 max-line $tring $instructions
 node-len $tring $tmp
+
+variable ignoreZ
 
 : get-line      ( -- num-chars flag ) line-buffer max-line fd-in read-line throw ;
 : get-next-num       ( str len -- n addr rem )
@@ -80,33 +83,38 @@ node-len $tring $tmp
     loop
 ;
 
-: allendinZ?          ( -- f )
-    true                                                        ( result )      \ assume all end in Z
-    paths q-len 0 do
-        [char] Z paths i q-data-ptr @ decode-hash ( 2dup type ." ..." ) ends-in? and  ( result )
-    loop
-\    dup if ."  - All Z " else ."  - Continue " then cr
-;
-
 
 : play-game             ( -- num-moves )
-    0 0                                                     ( acc instr-pos )
-    begin allendinZ? invert while                                ( acc instr-pos )
-        dup $instructions drop + c@                         ( acc instr-pos instr )
-        swap 1+ $instructions swap drop mod swap            ( acc instr-pos' instr )  
-        paths q-len 0 do                                    ( acc instr-pos' instr )
-            paths i q-data-ptr @ swap                       ( acc instr-pos' #this instr )
-            dup [char] L = if                               ( acc instr-pos' #this instr )
-                swap node-list @ get-left                   ( acc instr-pos' instr #left )
-                paths i q-data-ptr !                        ( acc instr-pos' instr )
-            else dup [char] R = if                          ( acc instr-pos' #this instr )
-                swap node-list @ get-right                  ( acc instr-pos' instr #right )
-                paths i q-data-ptr !                        ( acc instr-pos' instr )
-            else -1 abort" Invalid instruction" then then   ( acc instr-pos' instr )
-        loop                                                ( acc instr-pos' instr )
-        drop swap 1+ swap                                   ( acc' instr-pos' )
-    repeat                                                  ( acc instr-pos' )
-    drop                                                    ( acc )
+    paths q-len 0 do
+        paths i q-data-ptr @                                    ( #this )
+        0 swap 0 swap                                           ( acc instr-pos #this )
+        false ignoreZ !
+        1 0 do                                                  ( acc instr-pos #this )
+            dup decode-hash type ."  -  "
+            rot drop 0 rot rot
+            begin [char] Z over decode-hash ends-in? invert ignoreZ @ or while   ( acc instr-pos #this )
+                false ignoreZ !
+                over $instructions drop + c@                        ( acc instr-pos #this instr )
+                rot 1+ $instructions swap drop mod rot rot          ( acc instr-pos' #this instr )  
+                dup [char] L = if                                   ( acc instr-pos' #this instr )
+                    over node-list @ get-left                       ( acc instr-pos' #this instr #left )
+                    rot drop swap                                   ( acc instr-pos' #this' instr )
+                else dup [char] R = if                              ( acc instr-pos' #this instr )
+                    over node-list @ get-right                      ( acc instr-pos' #this instr #right )
+                    rot drop swap                                   ( acc instr-pos' #this' instr )
+                else -1 abort" Invalid instruction" then then       ( acc instr-pos' #this instr )
+                drop rot 1+ rot rot                                 ( acc' instr-pos' #this )
+            repeat                                                  ( acc instr-pos' #this )
+            rot dup  . ." Moves -- "                                ( instr-pos' #this acc )
+            dup loops q-push
+            over ." Ends at " decode-hash type ."  Next moves "     ( instr-pos' #this acc )
+            over node-list @ dup get-left decode-hash ." (" type    ( instr-pos' #this acc )
+            ." , " get-right decode-hash type ." )" cr              ( instr-pos' #this acc )
+            rot rot                                                 ( acc instr-pos' #this )
+            true ignoreZ !
+        loop cr                                                     ( acc instr-pos' #this )
+        2drop drop
+    loop
 ;
 
 
@@ -117,9 +125,28 @@ node-len $tring $tmp
 
 : print-paths           ( -- )
     paths q-len 0 do
-        paths i q-data-ptr @ decode-hash type cr
+        paths i q-data-ptr @ decode-hash type
+        ."  " loops i q-data-ptr @ . cr
     loop
 ;
+
+: gcd                   ( a b -- gcd )
+    begin dup while tuck mod repeat drop
+;
+
+: lcm                   ( a b -- lcm )
+    over 0= over 0= or if 2drop 0 exit then
+    2dup gcd abs */ 
+;
+
+: get-loops-lcm         ( -- n )
+    loops q-len dup 0= if -1 abort" No loops!" then     ( #loops )
+    loops 0 q-data-ptr @ swap                           ( res #loops )
+    dup 1 = if drop else                                ( res | res #loops )
+        1 do loops i q-data-ptr @ lcm loop              ( res )
+    then
+;
+
 : process           ( -- n )
     cr
     get-line invert if -1 abort" Could not read instruction line" then
@@ -128,11 +155,10 @@ node-len $tring $tmp
         dup 0> if store-node else drop then             (  )
     repeat drop
 
-    print-paths
-
     cr cr
     play-game
 
+    get-loops-lcm
 ;
 
 : .result       ( n -- )
@@ -143,6 +169,7 @@ node-len $tring $tmp
     $tmp drop 1 cells - 3 swap !
     0 node-list node-list-len -1 fill
     paths q-init
+    loops q-init
 ;
 
 : go
