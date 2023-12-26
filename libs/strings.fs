@@ -14,7 +14,7 @@
     rot swap 2swap swap                                 ( addr len1 c-addr len2 )
 ;
 
-: $trim-front   ( addr len -- addr len )                    \ remove leading spaces
+: $trim-front   ( addr len -- addr len )                \ remove leading spaces
     begin 2dup 0> swap c@ 32 = and while                ( addr len )
     1- swap 1+ swap repeat                              ( addr+1 len-1 )
 ;
