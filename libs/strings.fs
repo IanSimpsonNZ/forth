@@ -29,6 +29,14 @@
     2dup swap 1 cells - !                               ( addr1 addr2 #chars )          \ store string length in target
     move ;                                              (  )                            \ copy chars from string1 up to max-length of string2
 
+: $+        ( addr1 len1 addr2 len2 -- )                \ copy string 2 to the end of string 1
+    2over 2over swap drop +                             ( addr1 len1 addr2 len2 addr1 new-len )
+    over 2 cells - @                                    ( addr1 len1 addr2 len2 addr1 new-len str1-max-len )
+    over < if -1 abort" String overflow in $+" then     ( addr1 len1 addr2 len2 addr1 new-len )
+    swap 1 cells - !                                    ( addr1 len1 addr2 len2 )
+    2swap + swap move                                ( addr2 len2 end-1 )
+;
+
 : $add-char ( addr len char -- addr len' )
     rot dup 1 cells - dup @ swap 1 cells - @            ( len char addr len max-len )
     < if                                                ( len char addr )
@@ -42,4 +50,22 @@
 
 : $init     ( addr len -- )
     drop 1 cells - 0 swap !
+;
+
+24 $tring hello
+10 $tring world
+: test$+
+    hello $init
+    world $init
+    s" Hello" hello drop 2dup 1 cells - ! swap move                 (  )
+    s" , World" world drop 2dup 1 cells - ! swap move                 (  )
+    cr
+    hello .s type cr
+    world .s type cr
+    hello world $+
+    hello .s type cr
+    hello world $+
+    hello .s type cr
+    hello world $+
+    hello .s type cr
 ;
