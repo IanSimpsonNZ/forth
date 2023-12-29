@@ -33,7 +33,6 @@ variable springs-len
 
 128 constant max-q
 create numbers max-q 1 cells q-create drop
-\ create solution max-q 1 cells q-create drop
 create max-pos max-q 1 cells q-create drop
 
 create old-recs 128 1 cells q-create q-init
@@ -118,7 +117,7 @@ variable numbers-len
     then
 ;
 
-: get-address-range     ( s-rec -- end-addr start-addr )        \ get range of addresses in string-tmp
+: get-address-range     ( s-rec -- end-addr start-addr )        \ get range of addresses in springs-tmp
     dup num-ptr @ numbers swap q-data-ptr @                     ( s-rec num )
     swap char-pos @ springs-tmp drop +                          ( num cpos-addr )
     swap over +                                                 ( cpos-tmpaddr end-tmpaddr )
@@ -142,7 +141,6 @@ variable numbers-len
     if                                                          ( s-rec )
         dup placed-springs springs-len @ springs-tmp $copy      ( s-rec )                     \ Make a copy of current string
         true over get-address-range                             ( s-rec success? end-addr start-addr)
-\        .s cr
         do                                                      ( s-rec success? )
             i c@ working = if drop false leave then             ( s-rec success? )
             [char] x i c!                                       ( s-rec success? )
@@ -152,7 +150,6 @@ variable numbers-len
             over placed-springs                                 ( s-rec success? str-addr )
             springs-tmp rot swap move                           ( s-rec success? )
         then                                                    ( s-rec success? )
-\        over .stack-rec cr
     else                                                        ( s-rec )
         false                                                   ( s-rec success? )
     then                                                        ( s-rec success? )
@@ -221,7 +218,7 @@ variable numbers-len
 
 
 
-: bump              ( ... stack-rec -- ... stack-rec' | ... stack-rec stack-rec-next' )                        \ put next number on stack if there is one
+: bump              ( ... stack-rec -- ... stack-rec' | ... stack-rec stack-rec-next' )            \ put next number on stack if there is one
     dup num-ptr @ numbers-len @ 1- = if                                 ( s-rec )
         dup no-broken? if 1 score +! then                               ( s-rec )
         incr-cpos                                                       ( s-rec )
@@ -253,7 +250,7 @@ variable numbers-len
             score +!                                                    ( ,,, s-rec )
             old-recs q-push                                             ( ... prev-s-rec )
             incr-cpos                                                   ( ... prev-s-rec' )
-        else                                                            ( s-rec score )
+        else                                                            ( ... s-rec score )
             drop                                                        ( ... s-rec )
             dup still-room? if                                          ( ... s-rec )
                 place? if bump else incr-cpos then                      ( ... s-rec )           \ place? takes s-rec & modifies it, doesn't create new
@@ -266,7 +263,6 @@ variable numbers-len
         then                                                            ( ... s-rec )
     repeat old-recs q-push old-recs q-push                              (  )
 ;
-
 
 
 : pre-process       ( -- )                                      \ create 5 copies of springs and numbers
