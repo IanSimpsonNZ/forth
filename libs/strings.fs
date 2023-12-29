@@ -24,10 +24,11 @@
     does> ( -- addr len ) 1 cells + dup 1 cells + swap @
 ;
 
-: $copy     ( addr1 len1 addr2 len2 -- )                \ usage $from-string $to-string $copy - assumes my $string format above
+: $copy     ( addr1 len1 addr2 len2 -- )                \ usage $from-string $to-string $copy - assumes my $string format above for $to-string
     drop dup 2 cells - @ rot min                                  ( addr1 addr2 #chars )
     2dup swap 1 cells - !                               ( addr1 addr2 #chars )          \ store string length in target
     move ;                                              (  )                            \ copy chars from string1 up to max-length of string2
+
 
 : $+        ( addr1 len1 addr2 len2 -- )                \ copy string 2 to the end of string 1
     2over 2over swap drop +                             ( addr1 len1 addr2 len2 addr1 new-len )
