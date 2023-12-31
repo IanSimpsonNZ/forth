@@ -19,6 +19,8 @@ create row-nums max-q 1 cells q-create drop
 
 char # constant rock
 
+variable #po2
+
 
 : get-line      ( -- num-chars flag ) line-buffer max-line fd-in read-line throw ;
 : get-next-unsigned       ( str len -- n addr rem )
@@ -58,20 +60,31 @@ char # constant rock
     2swap 2drop swap drop                                               ( flag )
 ;
 
+: powerof2         ( n1 -- f )                                       \ true if number is a single power of 2
+    dup 1- and 0=                                                       ( result )
+    dup if 1 #po2 +! then                                               ( result )
+;
+
+: eq-or-po2         ( n1 n2 -- f )                                      \ true if numbers are equal or only differ by a single power of 2
+    xor dup 0= if drop true else powerof2 then                          ( flag )    \ need to test for zro (ie exactly the same) so we don't increment #po2
+;
+
 : check-reflection  ( num-q pos -- found-it? )
-    dup 0< if 2drop true else                                           ( true | num-q pos )
+    0 #po2 !
+    dup 0< if 2drop true else                                           ( true | num-q pos )  \ DELETED THE =
         true swap dup                                                   ( num-q found-it? pos pos )
-        1+ 0 do                                                         ( num-q found-it? pos )         \ pos has already ben checked to idetify reflexction candidate
+        1+ 0 do                                                         ( num-q found-it? pos )         \ pos has already been checked to idetify reflexction candidate
             rot                                                         ( found-it? pos num-q )
             over i + 1+                                                 ( found-it? pos num-q other-pos )
             over q-len over <= if drop rot rot leave then               ( found-it? pos num-q other-pos | num-q found-it? pos )
             over swap q-data-ptr @                                      ( found-it? pos num-q other-num )
             swap rot 2dup i - q-data-ptr @                              ( found-it? other-num num-q pos num )
-            2swap swap rot <> if rot drop false rot leave then          ( found-it? pos num-q | num-q found-it? pos )
+            2swap swap rot eq-or-po2 invert if rot drop false rot leave then          ( found-it? pos num-q | num-q found-it? pos )
             rot rot                                                     ( num-q found-it? pos )
         loop                                                            ( num-q found-it? pos )
         drop swap drop                                                  ( found-it? )
     then                                                                ( found-it? )
+    #po2 @ 1 = and
 ;
 
 : find-reflections  ( nums-q -- num-to-left-or-above )
@@ -79,7 +92,7 @@ char # constant rock
     dup q-len 1- 0 do                                                   ( res q )
         dup i q-data-ptr @                                              ( res q ith )
         over i 1+ q-data-ptr @                                          ( res q ith i+1th) \ Can't just add 1 to address because queues are circular
-        = if dup i check-reflection else false then                     ( res q found-it? )
+        eq-or-po2 if dup i check-reflection else false then                     ( res q found-it? )
         dup if ." Found reflection at " i 1+ . then
         if swap drop i 1+ swap leave then                               ( res q )
     loop drop                                                           ( res )
@@ -92,7 +105,6 @@ char # constant rock
     cr ." Check rows - "
     row-nums find-reflections swap                                      ( #cols #rows more-blocks? )
     cr .s cr
-\    -1 abort" Just first"
 ;
 
 : process-block-results     ( col-sum row-sum cols rows -- col-sum row-sum )
