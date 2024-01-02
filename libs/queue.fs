@@ -42,14 +42,17 @@ constant #q-header
     swap q-data +
 ;
 
+: q-len         ( q-addr -- len )
+    dup dup q-top-pos @ swap q-base-pos @ - swap #q-data-len @ mod
+;
+
+
 : q-data-ptr    ( q-addr n -- data-ptr )        \ n is the position in the queue relative to q-base-pos
+    2dup swap q-len >= if -1 abort" Invalid queue index" then
     over q-base-pos @ + over #q-data-len @ mod  \ get the absolute data position
     over #q-data-item @ * swap q-data +         \ convert to pointer
 ;
 
-: q-len         ( q-addr -- len )
-    dup dup q-top-pos @ swap q-base-pos @ - swap #q-data-len @ mod
-;
 
 : q.            ( queue-addr -- )
     dup dup q-base-pos @ swap q-top-pos @ = if ." Empty " drop else
